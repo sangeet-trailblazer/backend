@@ -5,7 +5,7 @@ from django.contrib.auth.models import update_last_login
 from .models import CustomUser
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from .models import *
 class UserLoginSerializer(serializers.Serializer):
 
     username = serializers.CharField()
@@ -46,3 +46,34 @@ class UserLoginSerializer(serializers.Serializer):
             return validation
         except CustomUser.DoesNotExist:
             raise serializers.ValidationError("Invalid login credentials") 
+
+
+
+class PatientInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientInfo
+        fields = '__all__'
+
+class MedicalHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalHistory
+        fields = '__all__'
+
+class BloodReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BloodReport
+        fields = '__all__'
+
+class CurrentSymptomsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CurrentSymptoms
+        fields = '__all__'
+class BloodReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BloodReport
+        fields = '__all__'
+
+class CurrentSymptomsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CurrentSymptoms
+        fields = '__all__'       
