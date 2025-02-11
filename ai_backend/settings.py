@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import dj_database_url
+import os
+from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -20,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r22dvb6!r%m%%1(d(4&$pvhie&_5b5&9z)lj3^%c_yrt-9+br8'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
@@ -89,7 +92,8 @@ DATABASES = {
         'PORT':'5432',
     }
 }
-DATABASES["default"]= dj_database_url.parse("postgresql://template_model_user:YdUGGmueHv7h1aTTmLA4Pa1RN3Cxhy2Y@dpg-culfp9tsvqrc73cd61k0-a.oregon-postgres.render.com/template_model")
+database_url = os.getenv("DATABASE_URL")
+DATABASES["default"]= dj_database_url.parse(database_url)
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
