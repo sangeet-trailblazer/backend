@@ -2,7 +2,7 @@ from django.urls import path
 from .views import *
 from . import views
 
-from ai_model import views 
+
 
 urlpatterns = [
      path('logout/', LogoutView.as_view(), name='logout'),
@@ -24,8 +24,7 @@ urlpatterns = [
     path('current-symptoms/<int:patient_id>/', views.CurrentSymptomsDetail.as_view(), name='current-symptoms-detail'),  # GET, PUT, DELETE
    
 
-    #Import ai Model URL
-     path('generate/', views.generate_response, name='generate_response'),
+    
 
 
 ]
