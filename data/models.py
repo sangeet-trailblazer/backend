@@ -17,14 +17,14 @@ class CustomUserManager(BaseUserManager):
 
 class CustomUser(AbstractUser, PermissionsMixin):
     ROLE_CHOICES = (
-        ('admin', 'admin'),
-        ('1', 'customer'),
+        ('Admin', 'Admin'),
+        ('Doctor', 'Doctor'),
         
     )
-    
+    fullname= models.CharField(max_length=70,default='abc')
     role = models.CharField(max_length=19, choices=ROLE_CHOICES)
     phonenumber = models.CharField(max_length=10, default='9999999999')
-
+    first_name=models.CharField(max_length= 20)
     objects = CustomUserManager()
 
     def __str__(self):
@@ -39,40 +39,42 @@ class CustomUser(AbstractUser, PermissionsMixin):
 # PATIENT MODELS
 
 class PatientInfo(models.Model):
-    Patientid = models.IntegerField(primary_key=True)  # Auto-generated unique identifier
+    CrNo = models.IntegerField(primary_key=True)  # Auto-generated unique identifier
     Name = models.CharField(max_length=100)
     Age = models.IntegerField()
     Gender = models.CharField(max_length=10)
     Occupation = models.CharField(max_length=100)
-    RecentVisit = models.DateField()
+    ConsultingDoctor=models.CharField(max_length=100,null=True)
+    Diagnosis=models.CharField(max_length=100,null=True)
+    FirstVisit=models.DateField(null=True)
 
     def __str__(self):
         return self.Name
+    
 
-class MedicalHistory(models.Model):
-    # Link medical history to PatientInfo using Patientid
-    patient = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='medical_histories')
-    Date = models.DateField()
-    Observation = models.TextField()
-    Remarks = models.TextField()
+class RecentVists(models.Model):
+    CrNo = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='recent_visists')
+    RecentVisit = models.DateField()
+    Followup=models.CharField(default=0)
+    
 
-    def __str__(self):
-        return f"Medical History for {self.patient.Name} on {self.Date}"
 
-class BloodReport(models.Model):
-    # Link blood report to PatientInfo using Patientid
-    patient = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='blood_reports')
-    Test = models.CharField(max_length=100)
-    Result = models.CharField(max_length=100)
-    Status = models.CharField(max_length=50)
 
-    def __str__(self):
-        return f"Blood report for {self.patient.Name}, Test: {self.Test}"
-
-class CurrentSymptoms(models.Model):
+class Diagnosis(models.Model):
     # Link current symptoms to PatientInfo using Patientid
-    patient = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='current_symptoms')
-    Symptoms = models.TextField()
+    CrNo = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='diagnosis')
+    Diagnosis = models.TextField()
 
     def __str__(self):
-        return f"Current symptoms for {self.patient.Name}"
+        return f"Current symptoms for {self.CrNo}"
+    
+    
+# class MedicalHistory(models.Model):
+#     # Link medical history to PatientInfo using Patientid
+#     CrNo = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='medical_histories')
+#     Date = models.DateField()
+#     Observation = models.TextField()
+#     Remarks = models.TextField()
+
+#     def __str__(self):
+#         return f"Medical History for {self.patient.Name} on {self.Date}"

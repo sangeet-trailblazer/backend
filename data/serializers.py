@@ -6,6 +6,21 @@ from .models import CustomUser
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
+from django.contrib.auth import get_user_model
+
+User = get_user_model() 
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)  # Hide password in responses
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'fullname', 'password','role','first_name']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)  # Hash password automatically
+        return user
+
 class UserLoginSerializer(serializers.Serializer):
 
     username = serializers.CharField()
@@ -41,6 +56,8 @@ class UserLoginSerializer(serializers.Serializer):
                 'access': access_token,
                 'refresh': refresh_token,
                 'username': user.username,
+                'role':user.role,
+                'first_name':user.first_name
             }
 
             return validation
@@ -54,26 +71,44 @@ class PatientInfoSerializer(serializers.ModelSerializer):
         model = PatientInfo
         fields = '__all__'
 
-class MedicalHistorySerializer(serializers.ModelSerializer):
+
+
+class DiagnosisSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MedicalHistory
+        model = Diagnosis
         fields = '__all__'
 
-class BloodReportSerializer(serializers.ModelSerializer):
+class RecentVistsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BloodReport
+        model = RecentVists
+        fields = '__all__' 
+
+# PatientsUnder a certain doctor
+class PatientConsultingDoctorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientInfo
         fields = '__all__'
 
-class CurrentSymptomsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CurrentSymptoms
-        fields = '__all__'
-class BloodReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BloodReport
-        fields = '__all__'
+class PatientWithFollowupSerializer(serializers.ModelSerializer):
+    followups = serializers.SerializerMethodField()
 
-class CurrentSymptomsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CurrentSymptoms
-        fields = '__all__'       
+        model = PatientInfo
+        fields = ['CrNo', 'Name', 'Age', 'Gender', 'Occupation', 'ConsultingDoctor', 'Diagnosis', 'FirstVisit', 'followups']
+
+    def get_followups(self, obj):
+        followups = RecentVists.objects.filter(CrNo=obj.CrNo)
+        return RecentVistsSerializer(followups, many=True).data
+
+#Doctor Name Serializer
+class DoctorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['first_name']
+
+
+
+# class MedicalHistorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = MedicalHistory
+#         fields = '__all__'  

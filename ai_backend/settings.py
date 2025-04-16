@@ -26,9 +26,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', False)
+DEBUG = os.getenv('DEBUG', True)
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
@@ -82,18 +82,6 @@ WSGI_APPLICATION = 'ai_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'template_model',
-        'USER':'postgres',
-        'PASSWORD': '6734',
-        'HOST': 'localhost',
-        'PORT':'5432',
-    }
-}
-database_url = os.getenv("DATABASE_URL")
-DATABASES["default"]= dj_database_url.parse(database_url)
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -104,6 +92,18 @@ DATABASES["default"]= dj_database_url.parse(database_url)
 #         'PORT':'5432',
 #     }
 # }
+# database_url = os.getenv("DATABASE_URL")
+# DATABASES["default"]= dj_database_url.parse(database_url)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'template_model',
+        'USER':'postgres',
+        'PASSWORD': '6734',
+        'HOST': 'localhost',
+        'PORT':'5432',
+    }
+}
 
 
 AUTH_USER_MODEL = 'data.customuser'
@@ -148,12 +148,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-ALLOWED_HOSTS = ['ai-backend-owov.onrender.com','localhost']
+ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['ai-backend-owov.onrender.com','localhost']
 CORS_ALLOWED_ORIGINS = [
-   "https://ai-frontend-k1zu.onrender.com",
-   "http://localhost:5173",
+#    "https://ai-frontend-k1zu.onrender.com",
+   "http://localhost:5174",
+   'http://localhost:5173',
+   "http://127.0.0.1:8000",
 
 ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 REST_FRAMEWORK = {
