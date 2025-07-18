@@ -1,16 +1,44 @@
+#django related
 from django.shortcuts import render
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from rest_framework.views import APIView
-from .serializers import UserLoginSerializer
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import *
-from .serializers import *
-from rest_framework.response import Response
-from rest_framework.decorators import api_view,permission_classes
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
 
-# 1.1 User Registration 
+import random
+import traceback
+from datetime import timedelta
+#rest
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.views import APIView
+#jwt
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.authentication import JWTAuthentication
+#twilio
+from twilio.rest import Client
+
+from .models import *
+from .models import PatientInfo
+from .serializers import (
+    UserLoginSerializer,
+    UserSerializer,
+    DiagnosisSerializer,
+    PatientInfoSerializer,
+    RecentVistsSerializer,
+    PatientConsultingDoctorSerializer,
+    PatientWithFollowupSerializer,
+    DoctorSerializer
+)
+User = get_user_model()
+#twilio credentials
+TWILIO_SID = 'AC535c1243b951118b2b0fba1405d29912'
+TWILIO_AUTH_TOKEN = 'b825d358503389cbd133c0dfa0a423e2'
+TWILIO_PHONE_NUMBER = '+16083446821'
+
+# 1.1 User Registration
 
 class UserRegisterAPIView(APIView):
     permission_classes = [AllowAny]
@@ -22,16 +50,16 @@ class UserRegisterAPIView(APIView):
             return Response({"message": "User registered successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#1.2 AllUserLogin 
+#1.2 AllUserLogin
 class UserLoginView(APIView):
     serializer_class = UserLoginSerializer
-    permission_classes = (AllowAny, )
+    permission_classes = [AllowAny]
 
     def post(self, request):
         
         serializer = self.serializer_class(data=request.data)
         valid = serializer.is_valid(raise_exception=True)
-  
+
         if valid:
             status_code = status.HTTP_200_OK
             userdetails=serializer.validated_data
@@ -46,7 +74,7 @@ class UserLoginView(APIView):
             return Response(response, status=status_code)
 
 class LogoutView(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
 
     def post(self, request):
         try:
@@ -113,7 +141,7 @@ class DiagnosisCreateAPIView(APIView):
             serializer.save()  # Triggers save method with Followup logic
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-# Recent Visit 
+# Recent Visit
 class RecentVistsListCreateAPIView(APIView):
     permission_classes = (AllowAny, )
     def get(self, request, pk=None):
@@ -183,7 +211,7 @@ class PatientFollowupView(APIView):
         serializer = PatientWithFollowupSerializer(patients, many=True)
         return Response(serializer.data)
 
-#Docor Lists API View
+#Doctor Lists API View
 
 class DoctorListView(APIView):
     permission_classes=(AllowAny,)
@@ -192,64 +220,167 @@ class DoctorListView(APIView):
         serializer = DoctorSerializer(doctors, many=True)
         return Response(serializer.data)
 
+#function for password_change
+@api_view(['POST']) #method =POST because we are changing it
+@authentication_classes([JWTAuthentication]) #uses Jwt
+@permission_classes([IsAuthenticated])#only for selected users
+def password_change(request):#function
+    user = request.user
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
 
+    # for any empty space
+    if not all([old_password, new_password, confirm_password]):
+        return Response(
+            {"error": "All fields are required."},#if left empty
+            status=status.HTTP_400_BAD_REQUEST #400= error
+        )
 
+    #Check if old password matches
+    if not user.check_password(old_password):# verification whether the old password is correct or not
+        return Response(
+            {"error": "Old password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST #for wrong password
+        )
 
+    # checking if both the passwords matched or not new & confirm
+    if new_password != confirm_password:
+        return Response(
+            {"error": "New password and confirm password do not match."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
+    # Update password and saving it
+    user.set_password(new_password)
+    user.save()
 
+    return Response(
+        {"message": "Password changed successfully."},
+        status=status.HTTP_200_OK
+    )
+    return Response(
+        {"message": "Password changed successfully! You can now log in with the new password."},
+        status=status.HTTP_200_OK
+    )
+#function generating 4 digit OTP Using  random function
+def generate_otp():
+    return str(random.randint(1000, 9999))
 
+# forget Password
+@api_view(['POST'])# atlast password is reset so POST
+@permission_classes([AllowAny])# any visitor can use this feature
+def forget_password(request): #function
+    username = request.data.get('username')
+    step = request.data.get('step')
+    print(f"Step received: {step}")
 
+    if step == "send_otp":# step1
+        raw_phone = request.data.get('phone', '')
+        request_phone = '+91' + raw_phone[-10:]
+        print(f"Username: {username}, Phone: {request_phone}")
 
+        try:
+            user = User.objects.get(username=username)
+            db_phone = user.phonenumber
+            normalized_db_phone = '+91' + db_phone[-10:]
 
+            if request_phone != normalized_db_phone:
+                return Response({"error": "Username and phone number do not match."}, status=400)
 
+            otp = generate_otp()
+            print(f"Generated OTP for {username}: {otp}")#using the random functon inside the generate OTP function
 
+            # Save OTP to otpstore database
+            OTPStore.objects.create(
+                username=username,
+                otp=otp,
+                verified=False,
+                timestamp=timezone.now()# latest password to be checked for the user
+            )
 
-# # MedicalHistory Views
+            #sending OTP via Twilio
+            try:
+                client = Client(TWILIO_SID, TWILIO_AUTH_TOKEN)
+                message = client.messages.create(
+                    body=f"Your OTP is {otp}",
+                    from_=TWILIO_PHONE_NUMBER,
+                    to=request_phone
+                )
+                print(f"OTP sent. Twilio SID: {message.sid}")
+            except Exception as e:
+                print("Twilio error:", e)
+                return Response({"error": f"Failed to send SMS: {str(e)}"}, status=500)
 
-# class MedicalHistoryListCreate(APIView):
-#     permission_classes=[AllowAny] 
-#     def get(self, request):
-#         medical_histories = MedicalHistory.objects.all()
-#         serializer = MedicalHistorySerializer(medical_histories, many=True)
-#         return Response(serializer.data)
+            return Response({"message": "OTP sent"})
 
-#     def post(self, request):
-#         serializer = MedicalHistorySerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
 
-# class MedicalHistoryDetail(APIView):
-#     permission_classes = [AllowAny]
+    elif step == "verify_otp": #step 2
+        otp = request.data.get('otp', '').strip()# for any blank spaces we use 
+        expiration_time = timezone.now() - timedelta(minutes=1)
 
-#     def get_object(self, patient_id):
-#         # Return queryset of medical histories for the patient
-#         return MedicalHistory.objects.filter(patient__Patientid=patient_id)
+        try:
+            # Delete expired OTPs
+            OTPStore.objects.filter(username=username, timestamp__lt=expiration_time).delete()
 
-#     def get(self, request, patient_id):
-#         # Get the medical history for the specific patient
-#         medical_history = self.get_object(patient_id)
-#         if medical_history.exists():  # Checking if there are any results
-#             serializer = MedicalHistorySerializer(medical_history, many=True)
-#             return Response(serializer.data)
-#         return Response({"error": "Medical history not found for this patient"}, status=status.HTTP_404_NOT_FOUND)
+            # Get most recent valid OTP
+            record = OTPStore.objects.filter(
+                username=username,
+                timestamp__gte=expiration_time
+            ).order_by('-timestamp').first()
 
-#     def put(self, request, patient_id):
-#         # Update the medical history of the specific patient
-#         medical_history = self.get_object(patient_id)
-#         if medical_history.exists():
-#             serializer = MedicalHistorySerializer(medical_history, data=request.data, many=True)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data)
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         return Response({"error": "Medical history not found for this patient"}, status=status.HTTP_404_NOT_FOUND)
+            if not record:
+                return Response({"error": "OTP not found or expired"}, status=404)
 
-#     def delete(self, request, patient_id):
-#         # Delete the medical history records of the specific patient
-#         medical_history = self.get_object(patient_id)
-#         if medical_history.exists():
-#             medical_history.delete()
-#             return Response({"message": "Medical history deleted successfully for this patient"}, status=status.HTTP_204_NO_CONTENT)
-#         return Response({"error": "Medical history not found for this patient"}, status=status.HTTP_404_NOT_FOUND)
+            if record.otp == otp:
+                record.verified = True
+                record.save()
+                return Response({"message": "OTP verified"})
+            else:
+                return Response({"error": "Incorrect OTP"}, status=400)
+
+        except Exception as e:
+            print("OTP verify error:", e)
+            return Response({"error": "Something went wrong while verifying OTP"}, status=500)
+
+    elif step == "reset_password":
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if new_password != confirm_password:
+            return Response({"error": "Passwords do not match"}, status=400)
+
+        try:
+            record = OTPStore.objects.filter(username=username).order_by('-timestamp').first()
+            if not record or not record.verified:
+                return Response({"error": "OTP not verified"}, status=400)
+
+            user = User.objects.get(username=username)
+            user.set_password(new_password)
+            user.save()
+
+            # Delete all OTPs for this user after one gets verified.
+            OTPStore.objects.filter(username=username).delete()
+
+            return Response({"message": "Password reset successful"})
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    return Response({"error": "Invalid step"}, status=400)
+class PatientsByDoctorView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        doctor_name = request.GET.get('doctor_name')
+        if not doctor_name:
+            return Response({"error": "Doctor name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        patients = PatientInfo.objects.filter(ConsultingDoctor=doctor_name)
+        serializer = PatientInfoSerializer(patients, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -1,15 +1,13 @@
-from django.urls import path
+from django.urls import path,include
 from .views import *
 from . import views
-
-
-
+from .views import forget_password
 urlpatterns = [
     
      path('register/', UserRegisterAPIView.as_view(), name='register'),
      path('logout/', LogoutView.as_view(), name='logout'),
      path('login/', UserLoginView.as_view(), name='login'),
-
+    
 
     # PatientInfo URLs
      path('patients/', views.PatientInfoListCreate.as_view(), name='patient_list_create'),
@@ -28,25 +26,17 @@ urlpatterns = [
     
     # Patient with followup serializer 
     path('patientfollowups/', PatientFollowupView.as_view(), name='patients-with-followups'),
-    
 
-    # Doctor's name list 
+
       path('doctors/', DoctorListView.as_view(), name='doctor-list'),
-    
-    
-    # # MedicalHistory URLspath('patients/', views.PatientInfoListCreate.as_view(), name='patient_list_create'),
-    #  path('medical-history/', views.MedicalHistoryListCreate.as_view(), name='medical_history_list_create'),
-    #  path('medical-history/<int:patient_id>/', views.MedicalHistoryDetail.as_view(), name='medical_history_detail'),
-     
-    #   path('blood-reports/', views.BloodReportList.as_view(), name='blood-report-list'),  # GET, POST
-    # path('blood-reports/<int:patient_id>/', views.BloodReportDetail.as_view(), name='blood-report-detail'),  # GET, PUT, DELETE
-
-    # # CurrentSymptoms URLs
-    # path('current-symptoms/', views.CurrentSymptomsList.as_view(), name='current-symptoms-list'),  # GET, POST
-    # path('current-symptoms/<int:patient_id>/', views.CurrentSymptomsDetail.as_view(), name='current-symptoms-detail'),  # GET, PUT, DELETE
-   
-
-    
-
-
+    # change Password path 
+      path('password_change/', views.password_change, name='password_change'),
+    # forgot Password 
+      path('forget_password/', forget_password, name='forget_password'),
+    #steps
+      path('send-otp/', forget_password),
+      path('verify-otp/', forget_password),
+      path('reset-password/', forget_password),
+      
+      path('patients-by-doctor/', PatientsByDoctorView.as_view(), name='patients-by-doctor'),
 ]

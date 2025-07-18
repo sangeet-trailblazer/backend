@@ -1,20 +1,20 @@
-from rest_framework import serializers
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.models import update_last_login  
-from .models import CustomUser
-from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import *
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth import get_user_model
+from .models import CustomUser
+from .models import *
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import serializers
 
-User = get_user_model() 
+User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)  # Hide password in responses
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'fullname', 'password','role','first_name']
+        fields = [ 'username', 'fullname', 'password','role','first_name']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -39,11 +39,7 @@ class UserLoginSerializer(serializers.Serializer):
 
         if user is None:
             raise serializers.ValidationError("Invalid login credentials")
-
-        # try:
-        #     CaptchaStore.objects.get(hashkey=hashkey, response=response.strip().lower())
-        # except CaptchaStore.DoesNotExist:
-        #     raise serializers.ValidationError("Invalid captcha")
+        
         
         try:
             refresh = RefreshToken.for_user(user)
@@ -105,10 +101,7 @@ class DoctorSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['first_name']
-
-
-
-# class MedicalHistorySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = MedicalHistory
-#         fields = '__all__'  
+        
+        
+        
+        

@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser,BaseUserManager,PermissionsMixin
-
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, role=None, **extra_fields):
         if not username:
@@ -23,30 +22,28 @@ class CustomUser(AbstractUser, PermissionsMixin):
     )
     fullname= models.CharField(max_length=70,default='abc')
     role = models.CharField(max_length=19, choices=ROLE_CHOICES)
-    phonenumber = models.CharField(max_length=10, default='9999999999')
+    phonenumber = models.CharField(max_length=10, null=False, blank=False)
     first_name=models.CharField(max_length= 20)
     objects = CustomUserManager()
 
     def __str__(self):
         return self.username
-
-    class Meta:
-        permissions = [
-            # Add any custom permissions here if needed
-        ]
+    #permissions if necessary
+    class Meta: 
+        permissions = []
 
 
 # PATIENT MODELS
 
 class PatientInfo(models.Model):
-    CrNo = models.IntegerField(primary_key=True)  # Auto-generated unique identifier
+    CrNo = models.IntegerField(primary_key=True)
     Name = models.CharField(max_length=100)
     Age = models.IntegerField()
     Gender = models.CharField(max_length=10)
     Occupation = models.CharField(max_length=100)
-    ConsultingDoctor=models.CharField(max_length=100,null=True)
-    Diagnosis=models.CharField(max_length=100,null=True)
-    FirstVisit=models.DateField(null=True)
+    ConsultingDoctor = models.CharField(max_length=100, null=True)  # This field was incorrectly named in your view
+    Diagnosis = models.CharField(max_length=100, null=True)
+    FirstVisit = models.DateField(null=True)
 
     def __str__(self):
         return self.Name
@@ -67,14 +64,14 @@ class Diagnosis(models.Model):
 
     def __str__(self):
         return f"Current symptoms for {self.CrNo}"
-    
-    
-# class MedicalHistory(models.Model):
-#     # Link medical history to PatientInfo using Patientid
-#     CrNo = models.ForeignKey(PatientInfo, on_delete=models.CASCADE, related_name='medical_histories')
-#     Date = models.DateField()
-#     Observation = models.TextField()
-#     Remarks = models.TextField()
 
-#     def __str__(self):
-#         return f"Medical History for {self.patient.Name} on {self.Date}"
+
+class OTPStore(models.Model):
+    username = models.CharField(max_length=100)
+    otp = models.CharField(max_length=4)
+    verified = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True) 
+
+    def __str__(self):
+        return f"{self.username} - Verified: {self.verified}"
+    

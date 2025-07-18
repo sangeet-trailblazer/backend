@@ -1,6 +1,9 @@
-from ai_model import views 
-from django.urls import path
-urlpatterns=[
-    #Import ai Model URL
-    #  path('generate/', views.generate_response, name='generate_response'),
+from django.urls import path,include
+from ai_model import views
+urlpatterns = [
+    path('generate/', views.generate_response, name='generate_response'),
+     path('auth/', include('data.urls')),
+     path('api/', include('data.urls')),
+
 ]
+
